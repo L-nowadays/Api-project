@@ -7,6 +7,12 @@ map_api_server = "http://static-maps.yandex.ru/1.x/"
 geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
 max_map_size = 17
 min_map_size = 0
+#   Keys used to move or resize map
+control_keys = (pygame.K_PAGEUP, pygame.K_PAGEDOWN, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN,
+                pygame.K_m)
+#   Map modes
+map_modes = ['sat', 'map', 'sat,skl']
+
 # Offset for each map size
 offsets = [[0, 0], [0, 0], [211, 82.9], [105.4, 62], [52.5, 37], [26.4, 19.65], [13.2, 9.65], [6.6, 4.865],
            [3.3, 2.464], [1.65, 1.232], [0.825, 0.6165], [0.4125, 0.30825], [0.20625, 0.1542], [0.103125, 0.07521],
@@ -16,21 +22,19 @@ min_latitude = -180
 min_longitude = -85
 max_longitude = 85
 
-# Keys used to move or resize map
-control_keys = (pygame.K_PAGEUP, pygame.K_PAGEDOWN, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN)
-
 # Start values
 running = True
 map_size = 0
 longitude = 0
 latitude = 0
+map_type_index = 0
 
 
 # Function for generating new map file.
 def create_new_map():
     # Params for static-maps request
     formated_pos = '{},{}'.format(str(latitude), str(longitude))
-    map_params = {"ll": formated_pos, "z": str(map_size), "l": "map"}
+    map_params = {"ll": formated_pos, "z": str(map_size), "l": map_modes[map_type_index]}
     # Static-maps request
     response = request(map_api_server, params=map_params)
     # Create temporary image file
@@ -71,7 +75,7 @@ while running:
                 map_size -= 1
             if event.key == pygame.K_PAGEUP and map_size + 1 <= max_map_size:
                 map_size += 1
-            if event.key in control_keys[2:]:
+            if event.key in control_keys[2:-1]:
                 lat_offset, lon_offset = offsets[map_size]
                 if event.key == pygame.K_LEFT:
                     latitude -= lat_offset
@@ -90,7 +94,9 @@ while running:
                     latitude = min_latitude
                 elif latitude > max_latitude:
                     latitude = max_latitude
-            print(longitude, latitude)
+            if event.key == pygame.K_m:
+                map_type_index = (map_type_index + 1) % 3
+
             # Each move action requires new map
             # Create and load new map
             create_new_map()
