@@ -1,5 +1,6 @@
 import pygame
 from support import request
+from GUI import TextBox
 import sys
 
 # Const
@@ -28,13 +29,16 @@ map_size = 0
 longitude = 0
 latitude = 0
 map_type_index = 0
+map_points = []
 
 
-# Function for generating new map file.
+# Function for generating new map file.  Z(bool) - automatic scale if z is False
 def create_new_map():
     # Params for static-maps request
-    formated_pos = '{},{}'.format(str(latitude), str(longitude))
-    map_params = {"ll": formated_pos, "z": str(map_size), "l": map_modes[map_type_index]}
+    formated_pos = '{},{}'.format(str(longitude), str(latitude))
+    map_params = {"ll": formated_pos, "l": map_modes[map_type_index], "z": str(map_size)}
+    if map_points:
+        map_params['pt'] = map_points
     # Static-maps request
     response = request(map_api_server, params=map_params)
     # Create temporary image file
@@ -47,25 +51,46 @@ def create_new_map():
         sys.exit(2)
 
 
-# Function for drawing map file on screen
-def draw_map():
-    screen.fill((255, 255, 255))
-    screen.blit(map_image, (0, 0))
-    pygame.display.flip()
+# Function for searching objects using search line
+def search(text):
+    if text != 'Not found':
+        text = ','.join(text.split())
+        global map_image, longitude, latitude, search_line
+        # Geocoder request
+        params = {"geocode": text, "format": "json"}
+        response = request(geocoder_api_server, params=params)
+        json_response = response.json()
+        if json_response["response"]["GeoObjectCollection"]["featureMember"]:
+            # Get toponym
+            toponym = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
+            # Get toponym cords
+            longitude, latitude = map(float, toponym["Point"]["pos"].split())
+            # Add point on map, remove old one
+            map_points.clear()
+            map_points.append('{},{},pm2dgl'.format(longitude, latitude))
+            # Create new map
+            create_new_map()
+            map_image = pygame.image.load('map.png')
+        else:
+            search_line.change_text('Not found')
 
 
 # Pygame setup
 pygame.init()
-screen = pygame.display.set_mode((600, 450))
+screen = pygame.display.set_mode((600, 500))
 timer = pygame.time.Clock()
+# Entry field
+search_line = TextBox((0, 450, 600, 50), '', search)
 # Create first map
 create_new_map()
 map_image = pygame.image.load('map.png')
 # Draw map
-draw_map()
+screen.blit(map_image, (0, 0))
 
 # Main loop
 while running:
+    # Clean screen
+    screen.fill((255, 255, 255))
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -94,14 +119,21 @@ while running:
                     latitude = min_latitude
                 elif latitude > max_latitude:
                     latitude = max_latitude
+            # Key "m" switches map type
             if event.key == pygame.K_m:
                 map_type_index = (map_type_index + 1) % 3
-
             # Each move action requires new map
             # Create and load new map
             create_new_map()
             map_image = pygame.image.load('map.png')
-            # Draw new map
-            draw_map()
+        # Search lane actions catcher
+        search_line.get_event(event)
+    # Update blinking thing
+    search_line.update()
+    # Draw search line
+    search_line.render(screen)
+    # Draw map
+    screen.blit(map_image, (0, 0))
+    pygame.display.flip()
     timer.tick(60)
 pygame.quit()
