@@ -7,7 +7,7 @@ import sys
 map_api_server = "http://static-maps.yandex.ru/1.x/"
 geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
 max_map_size = 17
-min_map_size = 0
+min_map_size = 3
 #   Keys used to move or resize map
 control_keys = (pygame.K_PAGEUP, pygame.K_PAGEDOWN, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN,
                 pygame.K_m)
@@ -15,19 +15,19 @@ control_keys = (pygame.K_PAGEUP, pygame.K_PAGEDOWN, pygame.K_LEFT, pygame.K_RIGH
 map_modes = ['sat', 'map', 'sat,skl']
 
 # Offset for each map size
-offsets = [[0, 0], [0, 0], [211, 82.7], [105.4, 62], [52.5, 37], [26.4, 19.65], [13.2, 9.65], [6.6, 4.865],
+offsets = [[105.4, 40], [52.5, 37], [26.4, 19.65], [13.2, 9.65], [6.6, 4.865],
            [3.3, 2.464], [1.65, 1.232], [0.825, 0.6165], [0.4125, 0.30825], [0.20625, 0.1542], [0.103125, 0.07521],
            [0.0515625, 0.037605], [0.02578125, 0.0185], [0.012890625, 0.00940125], [0.0064453125, 0.004700625]]
 max_latitude = 87
 min_latitude = -87
-min_longitude = -90
-max_longitude = 90
+min_longitude = -180
+max_longitude = 180
 
 # Start values
 p_i_value = ''
 p_i_show = False
 running = True
-map_size = 0
+map_size = 3
 longitude = 0
 latitude = 0
 map_type_index = 0
@@ -149,7 +149,7 @@ while running:
             if event.key == pygame.K_PAGEUP and map_size + 1 <= max_map_size:
                 map_size += 1
             if event.key in control_keys[2:-1]:
-                lon_offset, lat_offset = offsets[map_size]
+                lon_offset, lat_offset = offsets[map_size - 3]
                 if event.key == pygame.K_LEFT:
                     longitude -= lon_offset
                 if event.key == pygame.K_RIGHT:
