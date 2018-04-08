@@ -1,6 +1,6 @@
 import pygame
 from support import request
-from GUI import TextBox
+from GUI import TextBox, Button, Label, L_GREY, GUI
 import sys
 
 # Const
@@ -24,6 +24,8 @@ min_longitude = -85
 max_longitude = 85
 
 # Start values
+p_i_value = ''
+p_i_show = False
 running = True
 map_size = 0
 longitude = 0
@@ -32,7 +34,7 @@ map_type_index = 0
 map_points = []
 
 
-# Function for generating new map file.  Z(bool) - automatic scale if z is False
+# Function for generating new map file.
 def create_new_map():
     # Params for static-maps request
     formated_pos = '{},{}'.format(str(longitude), str(latitude))
@@ -53,34 +55,76 @@ def create_new_map():
 
 # Function for searching objects using search line
 def search(text):
-    if text != 'Not found':
-        text = ','.join(text.split())
-        global map_image, longitude, latitude, search_line
-        # Geocoder request
-        params = {"geocode": text, "format": "json"}
-        response = request(geocoder_api_server, params=params)
-        json_response = response.json()
-        if json_response["response"]["GeoObjectCollection"]["featureMember"]:
-            # Get toponym
-            toponym = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
-            # Get toponym cords
-            longitude, latitude = map(float, toponym["Point"]["pos"].split())
-            # Add point on map, remove old one
-            map_points.clear()
-            map_points.append('{},{},pm2dgl'.format(longitude, latitude))
-            # Create new map
-            create_new_map()
-            map_image = pygame.image.load('map.png')
+    text = ','.join(text.split())
+    global map_image, longitude, latitude, search_line, p_i_value
+    # Geocoder request
+    params = {"geocode": text, "format": "json"}
+    response = request(geocoder_api_server, params=params)
+    json_response = response.json()
+    if json_response["response"]["GeoObjectCollection"]["featureMember"]:
+        # Get toponym
+        toponym = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
+        # Toponym name
+        name = toponym["metaDataProperty"]["GeocoderMetaData"]['text']
+        # Postal index
+        try:
+            p_i_value = toponym["metaDataProperty"]["GeocoderMetaData"]['Address']['postal_code']
+        except KeyError:
+            pass
+        # Show name in adress line
+        if p_i_show:
+            address_line.change_text(name + ' | ' + p_i_value)
         else:
-            search_line.change_text('Not found')
+            address_line.change_text(name)
+        # Get toponym cords
+        longitude, latitude = map(float, toponym["Point"]["pos"].split())
+        # Add point on map, remove old one
+        map_points.clear()
+        map_points.append('{},{},pm2dgl'.format(longitude, latitude))
+        # Create new map
+        create_new_map()
+        map_image = pygame.image.load('map.png')
+    else:
+        address_line.change_text('Не найдено.')
+
+
+# Function for clear button
+def clear():
+    global longitude, latitude, map_image
+    map_points.clear()
+    address_line.change_text('')
+    create_new_map()
+    map_image = pygame.image.load('map.png')
+
+
+def postal_index():
+    global p_i_show
+    if map_points:
+        if p_i_show:
+            l = len(p_i_value)
+            if p_i_value:
+                address_line.change_text(address_line.text[:-l - 1])
+        else:
+            address_line.change_text(address_line.text + ' ' + p_i_value)
+        p_i_show = not p_i_show
 
 
 # Pygame setup
 pygame.init()
-screen = pygame.display.set_mode((600, 500))
+screen = pygame.display.set_mode((700, 597))
 timer = pygame.time.Clock()
 # Entry field
-search_line = TextBox((0, 450, 600, 50), '', search)
+search_line = TextBox((0, 450, 700, 50), '', search, 40)
+# Adress line
+address_line = Label((0, 497, 700, 100), '', 40, True)
+# Clear button
+clear_button = Button((600, 0, 100, 50), 'Сброс', clear, 28)
+# Postal index button
+postal_index_button = Button((600, 55, 100, 50), 'Индекс', postal_index, 28)
+# Filling gui
+gui = GUI()
+gui.add_page('Main', [search_line, address_line, clear_button, postal_index_button])
+gui.open_page('Main')
 # Create first map
 create_new_map()
 map_image = pygame.image.load('map.png')
@@ -90,8 +134,9 @@ screen.blit(map_image, (0, 0))
 # Main loop
 while running:
     # Clean screen
-    screen.fill((255, 255, 255))
+    screen.fill(L_GREY)
     for event in pygame.event.get():
+        # Quit case
         if event.type == pygame.QUIT:
             running = False
         # Move or resize events catcher
@@ -126,12 +171,11 @@ while running:
             # Create and load new map
             create_new_map()
             map_image = pygame.image.load('map.png')
-        # Search lane actions catcher
-        search_line.get_event(event)
-    # Update blinking thing
-    search_line.update()
-    # Draw search line
-    search_line.render(screen)
+        gui.get_event(event)
+    # Update gui
+    gui.update()
+    # Draw gui
+    gui.render(screen)
     # Draw map
     screen.blit(map_image, (0, 0))
     pygame.display.flip()
