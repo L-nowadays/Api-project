@@ -15,13 +15,13 @@ control_keys = (pygame.K_PAGEUP, pygame.K_PAGEDOWN, pygame.K_LEFT, pygame.K_RIGH
 map_modes = ['sat', 'map', 'sat,skl']
 
 # Offset for each map size
-offsets = [[0, 0], [0, 0], [211, 82.9], [105.4, 62], [52.5, 37], [26.4, 19.65], [13.2, 9.65], [6.6, 4.865],
+offsets = [[0, 0], [0, 0], [211, 82.7], [105.4, 62], [52.5, 37], [26.4, 19.65], [13.2, 9.65], [6.6, 4.865],
            [3.3, 2.464], [1.65, 1.232], [0.825, 0.6165], [0.4125, 0.30825], [0.20625, 0.1542], [0.103125, 0.07521],
            [0.0515625, 0.037605], [0.02578125, 0.0185], [0.012890625, 0.00940125], [0.0064453125, 0.004700625]]
-max_latitude = 180
-min_latitude = -180
-min_longitude = -85
-max_longitude = 85
+max_latitude = 87
+min_latitude = -87
+min_longitude = -90
+max_longitude = 90
 
 # Start values
 p_i_value = ''
@@ -38,6 +38,7 @@ map_points = []
 def create_new_map():
     # Params for static-maps request
     formated_pos = '{},{}'.format(str(longitude), str(latitude))
+    print(formated_pos)
     map_params = {"ll": formated_pos, "l": map_modes[map_type_index], "z": str(map_size)}
     if map_points:
         map_params['pt'] = map_points
@@ -57,6 +58,8 @@ def create_new_map():
 def search(text):
     text = ','.join(text.split())
     global map_image, longitude, latitude, search_line, p_i_value
+    # Clear p_i_value
+    p_i_value = ''
     # Geocoder request
     params = {"geocode": text, "format": "json"}
     response = request(geocoder_api_server, params=params)
@@ -72,7 +75,7 @@ def search(text):
         except KeyError:
             pass
         # Show name in adress line
-        if p_i_show:
+        if p_i_show and p_i_value:
             address_line.change_text(name + ' | ' + p_i_value)
         else:
             address_line.change_text(name)
@@ -90,7 +93,7 @@ def search(text):
 
 # Function for clear button
 def clear():
-    global longitude, latitude, map_image
+    global map_image
     map_points.clear()
     address_line.change_text('')
     create_new_map()
@@ -104,8 +107,8 @@ def postal_index():
             l = len(p_i_value)
             if p_i_value:
                 address_line.change_text(address_line.text[:-l - 1])
-        else:
-            address_line.change_text(address_line.text + ' ' + p_i_value)
+        elif p_i_value:
+            address_line.change_text(address_line.text + ' | ' + p_i_value)
         p_i_show = not p_i_show
 
 
@@ -146,15 +149,16 @@ while running:
             if event.key == pygame.K_PAGEUP and map_size + 1 <= max_map_size:
                 map_size += 1
             if event.key in control_keys[2:-1]:
-                lat_offset, lon_offset = offsets[map_size]
+                lon_offset, lat_offset = offsets[map_size]
                 if event.key == pygame.K_LEFT:
-                    latitude -= lat_offset
-                if event.key == pygame.K_RIGHT:
-                    latitude += lat_offset
-                if event.key == pygame.K_UP:
-                    longitude += lon_offset
-                if event.key == pygame.K_DOWN:
                     longitude -= lon_offset
+                if event.key == pygame.K_RIGHT:
+                    longitude += lon_offset
+                if event.key == pygame.K_UP:
+                    latitude += lat_offset
+                if event.key == pygame.K_DOWN:
+                    latitude -= lat_offset
+
                 # Handle border values
                 if longitude < min_longitude:
                     longitude = min_longitude
