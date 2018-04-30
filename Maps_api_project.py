@@ -38,20 +38,20 @@ map_points = []
 def create_new_map():
     # Params for static-maps request
     formated_pos = '{},{}'.format(str(longitude), str(latitude))
-    print(formated_pos)
     map_params = {"ll": formated_pos, "l": map_modes[map_type_index], "z": str(map_size)}
     if map_points:
         map_params['pt'] = map_points
     # Static-maps request
     response = request(map_api_server, params=map_params)
-    # Create temporary image file
-    map_file = "map.png"
-    try:
-        with open(map_file, "wb") as file:
-            file.write(response.content)
-    except IOError as ex:
-        print("Ошибка записи временного файла:", ex)
-        sys.exit(2)
+    if response:
+        # Create temporary image file
+        map_file = "map.png"
+        try:
+            with open(map_file, "wb") as file:
+                file.write(response.content)
+        except IOError as ex:
+            print("Ошибка записи временного файла:", ex)
+            sys.exit(2)
 
 
 # Function for searching objects using search line
@@ -103,13 +103,14 @@ def clear():
 def postal_index():
     global p_i_show
     if map_points:
-        if p_i_show:
-            l = len(p_i_value)
-            if p_i_value:
-                address_line.change_text(address_line.text[:-l - 1])
-        elif p_i_value:
-            address_line.change_text(address_line.text + ' | ' + p_i_value)
         p_i_show = not p_i_show
+        if p_i_show:
+            if p_i_value:
+                new_text = address_line.text + ' | ' + p_i_value
+                address_line.change_text(new_text)
+        elif p_i_value:
+            new_text = ' '.join(address_line.text.split()[:-2])
+            address_line.change_text(new_text)
 
 
 # Pygame setup

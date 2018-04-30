@@ -12,10 +12,8 @@ def request(server, params=None):
             print("Ошибка выполнения запроса:")
             print(response.url)
             print("Http статус:", response.status_code, "(", response.reason, ")")
-            sys.exit(1)
     except:
         print("Запрос не удалось выполнить. Проверьте наличие сети Интернет.")
-        sys.exit(1)
     return response
 
 
